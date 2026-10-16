@@ -114,7 +114,7 @@
     }
 
     // Hantar Data (POST)
-    async function hantarData() {
+    function hantarData() {
   let namaInput = document.getElementById('nama');
   let emailInput = document.getElementById('email');
   let btnHantar = document.getElementById('btnHantar');
@@ -127,35 +127,26 @@
     return;
   }
 
-  // 1. Tunjuk status proses pada butang
-  btnHantar.innerText = "Menghantar...";
-  btnHantar.disabled = true;
-
-  // 2. Selitkan data terus ke jadual (Optimistic UI Update) - Serta-merta!
+  // 1. Tunjuk baris baharu di jadual SERTA-MERTA (Instant Feedback)[cite: 1]
   tambahBarisSementara(nama, email);
 
-  // 3. Kosongkan input terus supaya pengguna rasa laju
+  // 2. Resets input terus supaya borang nampak pantas[cite: 1]
   namaInput.value = '';
   emailInput.value = '';
 
-  try {
-    // Hantar ke Google Apps Script di latar belakang
-    await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nama: nama, email: email })
-    });
-
-    // Refresh data sebenar dari Sheet selepas 3 saat untuk pastikan sync
+  // 3. HANTAR DI LATAR BELAKANG (TIADA 'await')[cite: 1]
+  // Kita x tunggu response dari Google Script[cite: 1]
+  fetch(API_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nama: nama, email: email })
+  }).then(() => {
+    // Kemaskini data sebenar dari Sheet secara senyap selepas 3 saat[cite: 1]
     setTimeout(ambilData, 3000);
-
-  } catch (err) {
-    alert("Ralat semasa menghantar data.");
-  } finally {
-    btnHantar.innerText = "Hantar Data";
-    btnHantar.disabled = false;
-  }
+  }).catch(err => {
+    console.error("Gagal hantar di latar belakang:", err);
+  });
 }
 
 // Fungsi pembantu untuk masukkan baris terus tanpa tunggu API
