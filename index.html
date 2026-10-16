@@ -2,39 +2,104 @@
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aplikasi Google Sheet DB</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h2>Borang Pendaftaran</h2>
-  <input type="text" id="nama" placeholder="Nama">
-  <input type="email" id="email" placeholder="Email">
-  <button onclick="hantarData()">Hantar</button>
+<body class="bg-slate-100 min-h-screen py-10 px-4 font-sans text-slate-800">
 
-  <h3>Data Sedia Ada:</h3>
-  <pre id="paparanData">Memuatkan data...</pre>
+  <div class="max-w-xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-md border border-slate-200">
+    
+    <!-- Tajuk -->
+    <div class="mb-6 border-b pb-4">
+      <h2 class="text-2xl font-bold text-slate-900">Borang Pendaftaran</h2>
+      <p class="text-sm text-slate-500">Isi borang di bawah untuk simpan data ke Google Sheets.</p>
+    </div>
+
+    <!-- Borang Input -->
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Nama Full</label>
+        <input type="text" id="nama" placeholder="Contoh: Ali bin Ahmad" 
+          class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Alamat Email</label>
+        <input type="email" id="email" placeholder="ali@example.com" 
+          class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+      </div>
+
+      <button onclick="hantarData()" id="btnHantar" 
+        class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium py-2.5 rounded-lg shadow transition duration-150 flex items-center justify-center">
+        Hantar Data
+      </button>
+    </div>
+
+    <!-- Senarai Data -->
+    <div class="mt-8 pt-6 border-t border-slate-200">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-lg font-semibold text-slate-900">Data Sedia Ada</h3>
+        <button onclick="ambilData()" class="text-xs text-blue-600 hover:underline">Muat Semula</button>
+      </div>
+
+      <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+        <pre id="paparanData" class="text-xs font-mono text-slate-600 whitespace-pre-wrap">Memuatkan data...</pre>
+      </div>
+    </div>
+
+  </div>
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzOHRSF-QvFfTEUY7NZCdXsYluw2XXYqQfYTjddsw3rSPd6FzS1F65nX2SeEOi7O-xY/exec";
 
     // Ambil Data (GET)
     async function ambilData() {
-      let res = await fetch(API_URL);
-      let data = await res.json();
-      document.getElementById('paparanData').innerText = JSON.stringify(data, null, 2);
+      document.getElementById('paparanData').innerText = "Memuatkan data...";
+      try {
+        let res = await fetch(API_URL);
+        let data = await res.json();
+        document.getElementById('paparanData').innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('paparanData').innerText = "Gagal memuatkan data.";
+      }
     }
 
     // Hantar Data (POST)
     async function hantarData() {
-      let nama = document.getElementById('nama').value;
-      let email = document.getElementById('email').value;
+      let namaInput = document.getElementById('nama');
+      let emailInput = document.getElementById('email');
+      let btnHantar = document.getElementById('btnHantar');
 
-      await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ nama: nama, email: email })
-      });
+      if (!namaInput.value || !emailInput.value) {
+        alert("Sila isi nama dan email!");
+        return;
+      }
 
-      alert("Data berjaya dihantar!");
-      ambilData(); // Kemaskini senarai
+      // Tukar teks butang semasa menghantar
+      btnHantar.innerText = "Menghantar...";
+      btnHantar.disabled = true;
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nama: namaInput.value, email: emailInput.value })
+        });
+
+        alert("Data berjaya dihantar!");
+        namaInput.value = '';
+        emailInput.value = '';
+        
+        setTimeout(ambilData, 1500);
+      } catch (err) {
+        alert("Ralat semasa menghantar data.");
+      } finally {
+        btnHantar.innerText = "Hantar Data";
+        btnHantar.disabled = false;
+      }
     }
 
     ambilData();
