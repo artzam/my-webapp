@@ -9,7 +9,7 @@
 </head>
 <body class="bg-slate-100 min-h-screen py-10 px-4 font-sans text-slate-800">
 
-  <div class="max-w-xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-md border border-slate-200">
+  <div class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-md border border-slate-200">
     
     <!-- Tajuk -->
     <div class="mb-6 border-b pb-4">
@@ -37,15 +37,29 @@
       </button>
     </div>
 
-    <!-- Senarai Data -->
+    <!-- Senarai Data (Jadual) -->
     <div class="mt-8 pt-6 border-t border-slate-200">
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-slate-900">Data Sedia Ada</h3>
-        <button onclick="ambilData()" class="text-xs text-blue-600 hover:underline">Muat Semula</button>
+        <button onclick="ambilData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md border border-slate-300 transition">
+          🔄 Muat Semula
+        </button>
       </div>
 
-      <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 max-h-60 overflow-y-auto">
-        <pre id="paparanData" class="text-xs font-mono text-slate-600 whitespace-pre-wrap">Memuatkan data...</pre>
+      <!-- Bekas Jadual (Overflow Scrollable) -->
+      <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-64 overflow-y-auto">
+        <table class="w-full text-sm text-left text-slate-600">
+          <thead class="text-xs text-slate-700 uppercase bg-slate-100 sticky top-0 border-b border-slate-200">
+            <tr id="tableHeader">
+              <!-- Header dinamik dari Google Sheet -->
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-200">
+            <tr>
+              <td colspan="3" class="px-4 py-3 text-center text-slate-400">Memuatkan data...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -54,15 +68,48 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzOHRSF-QvFfTEUY7NZCdXsYluw2XXYqQfYTjddsw3rSPd6FzS1F65nX2SeEOi7O-xY/exec";
 
-    // Ambil Data (GET)
+    // Ambil Data & Tukar ke Jadual HTML
     async function ambilData() {
-      document.getElementById('paparanData').innerText = "Memuatkan data...";
+      const tableHeader = document.getElementById('tableHeader');
+      const tableBody = document.getElementById('tableBody');
+
       try {
         let res = await fetch(API_URL);
         let data = await res.json();
-        document.getElementById('paparanData').innerText = JSON.stringify(data, null, 2);
+
+        if (!data || data.length === 0) {
+          tableBody.innerHTML = `<tr><td colspan="10" class="px-4 py-3 text-center text-slate-400">Tiada data dijumpai.</td></tr>`;
+          return;
+        }
+
+        // 1. Bina Header (Baris Pertama Google Sheet)
+        const headers = data[0];
+        tableHeader.innerHTML = headers.map(header => `
+          <th scope="col" class="px-4 py-3 font-semibold">${header || 'Kolum'}</th>
+        `).join('');
+
+        // 2. Bina Baris Data (Baris Seterusnya)
+        const rows = data.slice(1);
+        if (rows.length === 0) {
+          tableBody.innerHTML = `<tr><td colspan="${headers.length}" class="px-4 py-3 text-center text-slate-400">Tiada rekod lagi.</td></tr>`;
+          return;
+        }
+
+        tableBody.innerHTML = rows.map(row => `
+          <tr class="hover:bg-slate-50 transition">
+            ${row.map(cell => {
+              // Format tarikh jika cell mengandungi format ISO date
+              let value = cell;
+              if (typeof cell === 'string' && cell.includes('T') && !isNaN(Date.parse(cell))) {
+                value = new Date(cell).toLocaleString('ms-MY');
+              }
+              return `<td class="px-4 py-3 whitespace-nowrap">${value}</td>`;
+            }).join('')}
+          </tr>
+        `).join('');
+
       } catch (err) {
-        document.getElementById('paparanData').innerText = "Gagal memuatkan data.";
+        tableBody.innerHTML = `<tr><td colspan="10" class="px-4 py-3 text-center text-red-500">Gagal memuatkan data. Sila cuba lagi.</td></tr>`;
       }
     }
 
@@ -77,7 +124,6 @@
         return;
       }
 
-      // Tukar teks butang semasa menghantar
       btnHantar.innerText = "Menghantar...";
       btnHantar.disabled = true;
 
@@ -102,6 +148,7 @@
       }
     }
 
+    // Panggil fungsi semasa mula-mula muat halaman
     ambilData();
   </script>
 </body>
