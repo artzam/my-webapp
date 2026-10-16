@@ -31,9 +31,18 @@
           class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
       </div>
 
+      <!-- Butang Hantar Bersama Animasi Loading -->
       <button onclick="hantarData()" id="btnHantar" 
-        class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium py-2.5 rounded-lg shadow transition duration-150 flex items-center justify-center">
-        Hantar Data
+        class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 text-white font-medium py-2.5 rounded-lg shadow transition duration-150 flex items-center justify-center space-x-2">
+        
+        <!-- Icon Spinner (Tersembunyi secara lalai) -->
+        <svg id="iconLoading" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+
+        <!-- Teks Butang -->
+        <span id="textBtn">Hantar Data</span>
       </button>
     </div>
 
@@ -41,7 +50,7 @@
     <div class="mt-8 pt-6 border-t border-slate-200">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-slate-900">Data Sedia Ada</h3>
-        <button onclick="ambilData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md border border-slate-300 transition">
+        <button onclick="ambilData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-md border border-slate-300 transition flex items-center gap-1">
           🔄 Muat Semula
         </button>
       </div>
@@ -56,7 +65,7 @@
           </thead>
           <tbody id="tableBody" class="divide-y divide-slate-200">
             <tr>
-              <td colspan="3" class="px-4 py-3 text-center text-slate-400">Memuatkan data...</td>
+              <td colspan="100%" class="px-4 py-3 text-center text-slate-400">Memuatkan data...</td>
             </tr>
           </tbody>
         </table>
@@ -78,7 +87,7 @@
         let data = await res.json();
 
         if (!data || data.length === 0) {
-          tableBody.innerHTML = `<tr><td colspan="10" class="px-4 py-3 text-center text-slate-400">Tiada data dijumpai.</td></tr>`;
+          tableBody.innerHTML = `<tr><td colspan="100%" class="px-4 py-3 text-center text-slate-400">Tiada data dijumpai.</td></tr>`;
           return;
         }
 
@@ -98,7 +107,6 @@
         tableBody.innerHTML = rows.map(row => `
           <tr class="hover:bg-slate-50 transition">
             ${row.map(cell => {
-              // Format tarikh jika cell mengandungi format ISO date
               let value = cell;
               if (typeof cell === 'string' && cell.includes('T') && !isNaN(Date.parse(cell))) {
                 value = new Date(cell).toLocaleString('ms-MY');
@@ -109,62 +117,79 @@
         `).join('');
 
       } catch (err) {
-        tableBody.innerHTML = `<tr><td colspan="10" class="px-4 py-3 text-center text-red-500">Gagal memuatkan data. Sila cuba lagi.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="100%" class="px-4 py-3 text-center text-red-500">Gagal memuatkan data. Sila cuba lagi.</td></tr>`;
       }
     }
 
     // Hantar Data (POST)
     function hantarData() {
-  let namaInput = document.getElementById('nama');
-  let emailInput = document.getElementById('email');
-  let btnHantar = document.getElementById('btnHantar');
+      let namaInput = document.getElementById('nama');
+      let emailInput = document.getElementById('email');
+      let btnHantar = document.getElementById('btnHantar');
+      let iconLoading = document.getElementById('iconLoading');
+      let textBtn = document.getElementById('textBtn');
 
-  const nama = namaInput.value.trim();
-  const email = emailInput.value.trim();
+      const nama = namaInput.value.trim();
+      const email = emailInput.value.trim();
 
-  if (!nama || !email) {
-    alert("Sila isi nama dan email!");
-    return;
-  }
+      if (!nama || !email) {
+        alert("Sila isi nama dan email!");
+        return;
+      }
 
-  // 1. Tunjuk baris baharu di jadual SERTA-MERTA (Instant Feedback)[cite: 1]
-  tambahBarisSementara(nama, email);
+      // 1. Tunjukkan Animasi Loading & Kunci Butang
+      btnHantar.disabled = true;
+      iconLoading.classList.remove('hidden');
+      textBtn.innerText = "Menghantar...";
 
-  // 2. Resets input terus supaya borang nampak pantas[cite: 1]
-  namaInput.value = '';
-  emailInput.value = '';
+      // 2. Selitkan data serta-merta ke dalam jadual (Optimistic Update)
+      tambahBarisSementara(nama, email);
 
-  // 3. HANTAR DI LATAR BELAKANG (TIADA 'await')[cite: 1]
-  // Kita x tunggu response dari Google Script[cite: 1]
-  fetch(API_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nama: nama, email: email })
-  }).then(() => {
-    // Kemaskini data sebenar dari Sheet secara senyap selepas 3 saat[cite: 1]
-    setTimeout(ambilData, 3000);
-  }).catch(err => {
-    console.error("Gagal hantar di latar belakang:", err);
-  });
-}
+      // 3. Kosongkan ruang input
+      namaInput.value = '';
+      emailInput.value = '';
 
-// Fungsi pembantu untuk masukkan baris terus tanpa tunggu API
-function tambahBarisSementara(nama, email) {
-  const tableBody = document.getElementById('tableBody');
-  const tarikhSekarang = new Date().toLocaleString('ms-MY');
+      // 4. Hantar data di latar belakang
+      fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nama: nama, email: email })
+      }).then(() => {
+        // Kemaskini semula dari Sheet selepas 2.5 saat
+        setTimeout(ambilData, 2500);
+      }).catch(err => {
+        alert("Ralat semasa menghantar data.");
+      }).finally(() => {
+        // Hentikan Animasi Loading selepas 1.2 saat supaya terasa smooth
+        setTimeout(() => {
+          btnHantar.disabled = false;
+          iconLoading.classList.add('hidden');
+          textBtn.innerText = "Hantar Data";
+        }, 1200);
+      });
+    }
 
-  const barisBaru = document.createElement('tr');
-  barisBaru.className = "bg-blue-50 border-b transition duration-300 animate-pulse";
-  barisBaru.innerHTML = `
-    <td class="px-4 py-3 whitespace-nowrap text-slate-500">${tarikhSekarang}</td>
-    <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-900">${nama}</td>
-    <td class="px-4 py-3 whitespace-nowrap text-slate-600">${email}</td>
-  `;
+    // Masukkan baris baru secara sementara di dalam jadual
+    function tambahBarisSementara(nama, email) {
+      const tableBody = document.getElementById('tableBody');
+      const tarikhSekarang = new Date().toLocaleString('ms-MY');
 
-  // Masukkan di bahagian atas jadual
-  tableBody.insertBefore(barisBaru, tableBody.firstChild);
-}
+      const barisBaru = document.createElement('tr');
+      barisBaru.className = "bg-blue-50 border-b transition duration-300 animate-pulse";
+      barisBaru.innerHTML = `
+        <td class="px-4 py-3 whitespace-nowrap text-slate-500">${tarikhSekarang}</td>
+        <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-900">${nama}</td>
+        <td class="px-4 py-3 whitespace-nowrap text-slate-600">${email}</td>
+      `;
+
+      tableBody.insertBefore(barisBaru, tableBody.firstChild);
+    }
+
+    // Auto Warm-up: Bangunkan Google Script sebaik sahaja pengguna klik petak input
+    document.getElementById('nama').addEventListener('focus', () => {
+      fetch(API_URL).catch(() => {});
+    }, { once: true });
 
     // Panggil fungsi semasa mula-mula muat halaman
     ambilData();
