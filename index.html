@@ -115,38 +115,65 @@
 
     // Hantar Data (POST)
     async function hantarData() {
-      let namaInput = document.getElementById('nama');
-      let emailInput = document.getElementById('email');
-      let btnHantar = document.getElementById('btnHantar');
+  let namaInput = document.getElementById('nama');
+  let emailInput = document.getElementById('email');
+  let btnHantar = document.getElementById('btnHantar');
 
-      if (!namaInput.value || !emailInput.value) {
-        alert("Sila isi nama dan email!");
-        return;
-      }
+  const nama = namaInput.value.trim();
+  const email = emailInput.value.trim();
 
-      btnHantar.innerText = "Menghantar...";
-      btnHantar.disabled = true;
+  if (!nama || !email) {
+    alert("Sila isi nama dan email!");
+    return;
+  }
 
-      try {
-        await fetch(API_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nama: namaInput.value, email: emailInput.value })
-        });
+  // 1. Tunjuk status proses pada butang
+  btnHantar.innerText = "Menghantar...";
+  btnHantar.disabled = true;
 
-        alert("Data berjaya dihantar!");
-        namaInput.value = '';
-        emailInput.value = '';
-        
-        setTimeout(ambilData, 1500);
-      } catch (err) {
-        alert("Ralat semasa menghantar data.");
-      } finally {
-        btnHantar.innerText = "Hantar Data";
-        btnHantar.disabled = false;
-      }
-    }
+  // 2. Selitkan data terus ke jadual (Optimistic UI Update) - Serta-merta!
+  tambahBarisSementara(nama, email);
+
+  // 3. Kosongkan input terus supaya pengguna rasa laju
+  namaInput.value = '';
+  emailInput.value = '';
+
+  try {
+    // Hantar ke Google Apps Script di latar belakang
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nama: nama, email: email })
+    });
+
+    // Refresh data sebenar dari Sheet selepas 3 saat untuk pastikan sync
+    setTimeout(ambilData, 3000);
+
+  } catch (err) {
+    alert("Ralat semasa menghantar data.");
+  } finally {
+    btnHantar.innerText = "Hantar Data";
+    btnHantar.disabled = false;
+  }
+}
+
+// Fungsi pembantu untuk masukkan baris terus tanpa tunggu API
+function tambahBarisSementara(nama, email) {
+  const tableBody = document.getElementById('tableBody');
+  const tarikhSekarang = new Date().toLocaleString('ms-MY');
+
+  const barisBaru = document.createElement('tr');
+  barisBaru.className = "bg-blue-50 border-b transition duration-300 animate-pulse";
+  barisBaru.innerHTML = `
+    <td class="px-4 py-3 whitespace-nowrap text-slate-500">${tarikhSekarang}</td>
+    <td class="px-4 py-3 whitespace-nowrap font-medium text-slate-900">${nama}</td>
+    <td class="px-4 py-3 whitespace-nowrap text-slate-600">${email}</td>
+  `;
+
+  // Masukkan di bahagian atas jadual
+  tableBody.insertBefore(barisBaru, tableBody.firstChild);
+}
 
     // Panggil fungsi semasa mula-mula muat halaman
     ambilData();
